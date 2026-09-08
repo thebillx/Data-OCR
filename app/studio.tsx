@@ -10,12 +10,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Toaster, toast } from "sonner";
-import { initialData, dataWarnings, formatDate, type CardData, type TestDate } from "@/lib/card-data";
+import { initialData, defaultData, todayDate, addTestYears, validDate, dataWarnings, type CardData, type TestDate } from "@/lib/card-data";
 import { drawCard, WIDTH, HEIGHT, type Crop, type CardAssets } from "@/lib/draw-card";
+import { DateField, TitleField } from "./card-inputs";
 
-type TextField = Exclude<keyof CardData, "birth" | "issue" | "expiry">;
+type TextField = Exclude<keyof CardData, "birth" | "issue" | "expiry" | "expiryMode" | "title">;
 export default function Studio() {
   const [data, setData] = useState<CardData>({ ...initialData });
+  const [calendarYear, setCalendarYear] = useState(2026);
+  const [formVersion, setFormVersion] = useState(0);
+  useEffect(() => {
+    const now = new Date();
+    setCalendarYear(now.getFullYear());
+    setData(defaultData(now));
+  }, []);
   const [portrait, setPortrait] = useState<HTMLImageElement | null>(null);
   const [photoName, setPhotoName] = useState("");
   const [crop, setCrop] = useState<Crop>({ zoom: 1, x: 50, y: 50 });
@@ -50,7 +58,9 @@ export default function Studio() {
   useEffect(() => {
     let active = true;
     const reference = new Image(), clean = new Image();
-    reference.src = "/card-reference.jpeg"; clean.src = "/card-clean.png";
+    // Relative URLs work on a custom domain and on GitHub Pages project paths.
+    reference.src = new URL("./card-reference.jpeg", document.baseURI).href;
+    clean.src = new URL("./card-clean.png", document.baseURI).href;
     Promise.all([reference.decode(), clean.decode()]).then(() => {
       if (active) setAssets({reference, clean});
     }).catch(() => { if (active) setAssetError(true); });
@@ -58,7 +68,7 @@ export default function Studio() {
   }, []);
   useEffect(() => {
     let active = true;
-    Promise.all([document.fonts.load('400 32px "Sarabun"', 'ทดสอบ Test'), document.fonts.load('600 32px "Sarabun"', 'ทดสอบ Test')])
+    Promise.all([document.fonts.load('400 32px "Sarabun"', 'ทดสอบ Test'), document.fonts.load('600 32px "Sarabun"', 'ทดสอบ Test'), document.fonts.load('700 54px "CardThai"', 'นาย กิตติพงศ์ ศรีสมบัติเอ็นซีบีดี')])
       .then((fonts) => { if (active) { if (fonts.some((f) => f.length === 0)) throw new Error("font missing"); setFontReady(true); } })
       .catch(() => { if (active) setFontError(true); });
     return () => { active = false; photoSequence.current++; if (photoUrl.current) URL.revokeObjectURL(photoUrl.current); };
@@ -68,9 +78,9 @@ export default function Studio() {
   }, [data, portrait, crop, fontReady, assets]);
   const warnings = [...dataWarnings(data), ...layoutWarnings];
   const setField = (key: TextField, value: string) => setData((old) => ({ ...old, [key]: value }));
-  const changeDate = (key: "birth" | "issue" | "expiry", part: keyof TestDate, value: string) => setData((old) => ({ ...old, [key]: { ...old[key], [part]: value } }));
+  const changeDate = (key: "birth" | "issue" | "expiry", value: TestDate) => setData((old) => ({ ...old, [key]: value }));
   const field = (key: TextField, label: string, placeholder?: string, className = "") => <div className={`field ${className}`}><label htmlFor={key}>{label}</label><Input id={key} value={data[key]} placeholder={placeholder} autoComplete="off" spellCheck={false} onChange={(e) => setField(key, e.target.value)} /></div>;
-  const dateFields = (key: "birth" | "issue" | "expiry", label: string) => <fieldset className="date-field"><legend>{label}</legend><div className="date-inputs">{([['day', 'วัน', 'DD'], ['month', 'เดือน', 'MM'], ['year', 'ปี ค.ศ.', 'YYYY']] as const).map(([part, title, placeholder]) => <div key={part}><label htmlFor={`${key}-${part}`} className="sr-only">{label} {title}</label><Input id={`${key}-${part}`} aria-label={`${label} ${title}`} value={data[key][part]} inputMode="numeric" placeholder={placeholder} autoComplete="off" onChange={(e) => changeDate(key, part, e.target.value)} /></div>)}</div><p className="field-help">{formatDate(data[key], "th") || "วัน / เดือน / ปี ค.ศ. → แสดง พ.ศ. บนบัตร"}</p></fieldset>;
+  const dateFields = (key: "birth" | "issue" | "expiry", label: string) => <DateField key={`${formVersion}-${key}`} id={key} label={label} value={data[key]} currentYear={calendarYear} onChange={(value) => changeDate(key, value)} shortcut={key === "issue" ? { label: "ใช้วันนี้", apply: () => changeDate(key, todayDate()) } : key === "expiry" ? { label: "วันออกบัตร + 8 ปี", disabled: !validDate(data.issue), apply: () => changeDate(key, addTestYears(data.issue, 8)) } : undefined} />;
 
   async function importPhoto(file?: File) {
     if (photoRef.current) photoRef.current.value = "";
@@ -127,19 +137,42 @@ export default function Studio() {
     <header className="topbar"><a href="#main" className="brand" aria-label="Mock Card Studio"><span className="brand-symbol"><ScanLine size={22} /></span><span>Mock Card <strong>Studio</strong></span></a><div className="topbar-meta"><span className="environment">NTB / DEV</span><span className="local-badge"><LockKeyhole size={14} /> ข้อมูลอยู่ในเบราว์เซอร์</span></div></header>
     <main id="main">
       <div className="page-heading"><div><p className="eyebrow">QA WORKSPACE</p><h1>สร้างบัตรข้อมูลทดสอบ</h1><p className="intro">แก้ไขแต่ละช่อง แล้วดาวน์โหลดภาพไปใช้ทดสอบ</p></div>
-        <AlertDialog><AlertDialogTrigger asChild><Button variant="outline" className="reset-button"><RotateCcw size={16} /> เริ่มใหม่</Button></AlertDialogTrigger><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>เริ่มจากข้อมูลตัวอย่างใหม่?</AlertDialogTitle><AlertDialogDescription>ข้อมูลที่แก้ไขและรูปที่เลือกในหน้านี้จะถูกล้าง ไฟล์ PNG ที่ดาวน์โหลดไปแล้วจะไม่เปลี่ยนแปลง</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>ยกเลิก</AlertDialogCancel><AlertDialogAction onClick={() => { setData({ ...initialData }); removePhoto(); setTab("identity"); toast.success("กลับเป็นข้อมูลตัวอย่างแล้ว"); }}>เริ่มใหม่</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+        <AlertDialog><AlertDialogTrigger asChild><Button variant="outline" className="reset-button"><RotateCcw size={16} /> เริ่มใหม่</Button></AlertDialogTrigger><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>เริ่มจากข้อมูลตัวอย่างใหม่?</AlertDialogTitle><AlertDialogDescription>คืนชื่อและวันเกิด mock เดิม ใช้วันนี้เป็นวันออกบัตร และวันหมดอายุ +8 ปี ข้อมูลที่แก้กับรูปที่เลือกจะถูกล้าง ไฟล์ PNG ที่บันทึกแล้วไม่เปลี่ยนแปลง</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>ยกเลิก</AlertDialogCancel><AlertDialogAction onClick={() => { const now = new Date(); setData(defaultData(now)); setCalendarYear(now.getFullYear()); setFormVersion((v) => v + 1); removePhoto(); setTab("identity"); toast.success("กลับเป็นข้อมูลตัวอย่างและวันที่ปัจจุบันแล้ว"); }}>เริ่มใหม่</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
       </div>
       <div className="editor-layout">
         <section className="form-panel" aria-label="แก้ไขข้อมูลบัตร"><div className="panel-heading"><h2>ข้อมูลบนบัตร</h2><span className="panel-note">แก้ไขได้ทุกช่อง</span></div>
           <Tabs value={tab} onValueChange={setTab} className="editor-tabs"><TabsList className="form-tabs" aria-label="หมวดข้อมูล"><TabsTrigger value="identity">บุคคล</TabsTrigger><TabsTrigger value="details">วันและที่อยู่</TabsTrigger><TabsTrigger value="photo">รูปภาพ</TabsTrigger></TabsList>
             <TabsContent value="identity" className="form-content">
               {field("idNumber", "เลขประจำตัวทดสอบ", "กรอกเป็นข้อความได้ รวมเลข 0 นำหน้า", "mono-field")}<p className="field-help">เก็บค่าตามที่กรอก ไม่เติมเลขหรือลบศูนย์นำหน้า</p>
+              <TitleField value={data.title} onChange={(title) => setData((old) => ({ ...old, title }))} />
               <div className="section-label"><span>ชื่อภาษาไทย</span><span>TH</span></div>
-              {field("titleTh", "คำนำหน้า (ไทย)")}<div className="two-fields">{field("firstTh", "ชื่อ (ไทย)")}{field("middleTh", "ชื่อกลาง (ไทย)", "ไม่บังคับ")}</div>{field("lastTh", "นามสกุล (ไทย)")}
+              <div className="two-fields">{field("firstTh", "ชื่อ (ไทย)")}{field("middleTh", "ชื่อกลาง (ไทย)", "ไม่บังคับ")}</div>{field("lastTh", "นามสกุล (ไทย)")}
               <div className="section-label"><span>ชื่อภาษาอังกฤษ</span><span>EN</span></div>
-              {field("titleEn", "คำนำหน้า (อังกฤษ)")}<div className="two-fields">{field("firstEn", "ชื่อ (อังกฤษ)")}{field("middleEn", "ชื่อกลาง (อังกฤษ)", "ไม่บังคับ")}</div>{field("lastEn", "นามสกุล (อังกฤษ)")}
+              <div className="two-fields">{field("firstEn", "ชื่อ (อังกฤษ)")}{field("middleEn", "ชื่อกลาง (อังกฤษ)", "ไม่บังคับ")}</div>{field("lastEn", "นามสกุล (อังกฤษ)")}
             </TabsContent>
-            <TabsContent value="details" className="form-content"><p className="input-note">กรอกวัน / เดือน / ปี ค.ศ. ระบบแสดงปี พ.ศ. ให้บนบัตร</p>{dateFields("birth", "วันเกิด")}{dateFields("issue", "วันออกบัตร")}{dateFields("expiry", "วันหมดอายุ")}<div className="section-label"><span>ที่อยู่และหน่วยงาน</span></div><div className="field"><label htmlFor="address">ที่อยู่</label><Textarea id="address" value={data.address} rows={3} onChange={(e) => setField("address", e.target.value)} /><p className="field-help">กดขึ้นบรรทัดใหม่เพื่อแบ่งที่อยู่บนบัตร</p></div>{field("issuer", "หน่วยงานออกบัตร")}{field("issuerCode", "รหัสหน่วยงาน", "ไม่บังคับ · เพิ่มใต้ตราเมื่อกรอก")}</TabsContent>
+            <TabsContent value="details" className="form-content">
+              <p className="input-note">เลือกวัน / เดือน / ปี ค.ศ. · แสดง พ.ศ. บนบัตร<br />เริ่มต้น: วันเกิด mock เดิม · วันออกบัตรวันนี้ตามอุปกรณ์ · หมดอายุ +8 ปี (ค่าทดสอบ ไม่ใช่กฎออกบัตรจริง)</p>
+              {dateFields("birth", "วันเกิด")}
+              {dateFields("issue", "วันออกบัตร")}
+              <div className="field expiry-mode">
+                <label htmlFor="expiry-mode">รูปแบบวันหมดอายุ</label>
+                <Select value={data.expiryMode} onValueChange={(value) => setData((old) => ({ ...old, expiryMode: value === "lifetime" ? "lifetime" : "date" }))}>
+                  <SelectTrigger id="expiry-mode" aria-label="รูปแบบวันหมดอายุ" aria-describedby="expiry-mode-help"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="date">ระบุวันที่</SelectItem>
+                    <SelectItem value="lifetime">ตลอดชีพ / LIVELONG</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p id="expiry-mode-help" className="field-help">เลือกตลอดชีพเพื่อแสดงทั้งไทยและอังกฤษ สลับกลับเป็นวันที่ได้โดยยังเก็บวันที่เดิมไว้</p>
+              </div>
+              {data.expiryMode === "date" && <>
+                {dateFields("expiry", "วันหมดอายุ")}
+                <p className="field-help">เปลี่ยนวันออกบัตรแล้ว วันหมดอายุจะไม่เปลี่ยนตามเอง ใช้ปุ่ม +8 ปีเมื่อต้องการ</p>
+              </>}
+              <div className="section-label"><span>ที่อยู่และหน่วยงาน</span></div>
+              <div className="field"><label htmlFor="address">ที่อยู่</label><Textarea id="address" value={data.address} rows={3} onChange={(e) => setField("address", e.target.value)} /><p className="field-help">กดขึ้นบรรทัดใหม่เพื่อแบ่งที่อยู่บนบัตร</p></div>
+              {field("issuer", "หน่วยงานออกบัตร")}{field("issuerCode", "รหัสหน่วยงาน", "ไม่บังคับ · เพิ่มใต้ตราเมื่อกรอก")}
+            </TabsContent>
             <TabsContent value="photo" className="form-content">
               <div className="upload-area" onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); void importPhoto(e.dataTransfer.files[0]); }}><span className="upload-icon"><ImagePlus size={26} /></span><h3>เพิ่มรูปบนบัตร</h3><p>เริ่มต้นด้วย Luffy ตามต้นแบบ เลือกรูปใหม่เพื่อแทนที่</p><input ref={photoRef} id="portrait-upload" type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" aria-label="เลือกรูปภาพ" onChange={(e) => void importPhoto(e.target.files?.[0])} /><Button variant="outline" onClick={() => photoRef.current?.click()} disabled={photoLoading}>{photoLoading ? "กำลังอ่านรูป…" : "เลือกรูปภาพ"}</Button><span className="file-hint">PNG, JPG, WebP · ไม่เกิน 10 MB / 24 MP</span></div>
               {portrait && <><div className="photo-selected"><span title={photoName}><FileImage size={16} />{photoName}</span><Button variant="ghost" size="icon" aria-label="คืนรูปต้นแบบ" onClick={removePhoto}><X size={16} /></Button></div><div className="section-label"><span><Move size={14} /> จัดตำแหน่งรูป</span></div>{([['zoom', 'ขยายรูป', 1, 3, .05], ['x', 'ตำแหน่งซ้าย–ขวา', 0, 100, 1], ['y', 'ตำแหน่งบน–ล่าง', 0, 100, 1]] as const).map(([key, label, min, max, step]) => <div className="crop-control" key={key}><div><span id={`crop-label-${key}`}>{label}</span><output>{key === "zoom" ? `${crop[key].toFixed(2)}×` : `${crop[key]}%`}</output></div><Slider aria-label={label} aria-labelledby={`crop-label-${key}`} min={min} max={max} step={step} value={[crop[key]]} onValueChange={([value]) => setCrop((old) => ({ ...old, [key]: value }))} /></div>)}<Button variant="outline" onClick={() => setCrop({ zoom: 1, x: 50, y: 50 })}><RotateCcw size={15} /> คืนตำแหน่งกลาง</Button></>}

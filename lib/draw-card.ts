@@ -1,4 +1,4 @@
-import { formatDate, fullName, initialData, type CardData } from "./card-data";
+import { formatDate, formatExpiry, fullName, titleText, type CardData } from "./card-data";
 export const WIDTH = 1536, HEIGHT = 1024;
 export const WATERMARK = "MOCK DATA • DEV TEST • NOT VALID";
 export type Crop = { zoom: number; x: number; y: number };
@@ -6,7 +6,7 @@ export type CardAssets = { reference: HTMLImageElement; clean: HTMLImageElement 
 export function displayId(value: string) {
   return /^\d{13}$/.test(value) ? value.replace(/^(\d)(\d{4})(\d{5})(\d{2})(\d)$/, "$1 $2 $3 $4 $5") : value;
 }
-/** Original specimen pixels are retained except for edited fields.
+/** Editable text uses one rendering path before and after editing.
  * Barcode and stamp remain decorative; they do not encode entered values.
  */
 export function drawCard(canvas: HTMLCanvasElement, data: CardData, photo: HTMLImageElement | null, crop: Crop, scale: number, assets: CardAssets): string[] {
@@ -15,11 +15,10 @@ export function drawCard(canvas: HTMLCanvasElement, data: CardData, photo: HTMLI
   if (!ctx) throw new Error("Canvas unavailable");
   ctx.globalCompositeOperation = "source-over";
   ctx.scale(scale, scale); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";
-  const textChanged = JSON.stringify(data) !== JSON.stringify(initialData);
-  // Once any text changes, render every editable value over one full clean plate.
-  // This avoids both old-glyph shadows and visible rectangular repair seams.
-  ctx.drawImage(textChanged ? assets.clean : assets.reference, 0, 0, WIDTH, HEIGHT);
-  if (textChanged) {
+  // Always render editable values. A raster-to-font switch on the first keystroke
+  // would make the title and Thai name suddenly change typeface.
+  ctx.drawImage(assets.clean, 0, 0, WIDTH, HEIGHT);
+  {
     // The supplied clean plate intentionally retains the original issuer line.
     // Replace it with a feathered nearby texture patch, then restore the fixed stamp.
     const issuerPatch=document.createElement("canvas"), issuerMask=document.createElement("canvas");
@@ -36,26 +35,26 @@ export function drawCard(canvas: HTMLCanvasElement, data: CardData, photo: HTMLI
   const warnings: string[] = [];
   const black = "#080d0d", blue = "#080d80";
   type Rect = [number, number, number, number];
-  const field = (value: string, _original: string, rect: Rect, baseline: number, size: number, label: string, color = black) => {
-    if (!textChanged) return;
+  const field = (value: string, rect: Rect, baseline: number, size: number, label: string, color = black) => {
     if (value.length > 4096) { warnings.push(`${label}ยาวมาก แสดงเฉพาะส่วนที่อยู่ในพื้นที่บัตร`); value = value.slice(0,4096); }
     const [x,y,w,h] = rect;
     let fitted = size;
-    ctx.font = `600 ${fitted}px Sarabun, sans-serif`;
-    while (ctx.measureText(value).width > w - 8 && fitted > 24) { fitted--; ctx.font = `600 ${fitted}px Sarabun, sans-serif`; }
+    const font = (px: number) => label === "ชื่อภาษาไทย" ? `700 ${px}px CardThai, sans-serif` : `600 ${px}px Sarabun, sans-serif`;
+    ctx.font = font(fitted);
+    while (ctx.measureText(value).width > w - 8 && fitted > 24) { fitted--; ctx.font = font(fitted); }
     if (ctx.measureText(value).width > w - 8) warnings.push(`${label}ยาวเกินพื้นที่ ภาพจะแสดงไม่ครบ`);
     ctx.save(); ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip();
     ctx.fillStyle = color; ctx.fillText(value, x + 3, baseline); ctx.restore();
   };
-  const englishName = (d: CardData) => [d.titleEn,d.firstEn,d.middleEn].filter(Boolean).join(" ");
-  field(displayId(data.idNumber), displayId(initialData.idNumber), [650,113,775,76],174,56,"เลขประจำตัว");
-  field(displayId(data.idNumber), displayId(initialData.idNumber), [1100,880,352,56],923,36,"เลขใต้รูป");
-  field(fullName(data,"th"),fullName(initialData,"th"),[455,211,1055,77],274,47,"ชื่อภาษาไทย");
-  field(englishName(data),englishName(initialData),[625,301,450,60],348,41,"ชื่อภาษาอังกฤษ",blue);
-  field(data.lastEn,initialData.lastEn,[658,365,418,57],409,39,"นามสกุลภาษาอังกฤษ",blue);
-  field(formatDate(data.birth,"th"),formatDate(initialData.birth,"th"),[638,434,436,58],479,41,"วันเกิดภาษาไทย");
-  field(formatDate(data.birth,"en"),formatDate(initialData.birth,"en"),[708,495,367,56],539,38,"วันเกิดภาษาอังกฤษ",blue);
-  if (textChanged) {
+  const englishName = [titleText(data.title).en,data.firstEn,data.middleEn].filter(Boolean).join(" ");
+  field(displayId(data.idNumber), [650,113,775,76],174,56,"เลขประจำตัว");
+  field(displayId(data.idNumber), [1100,880,352,56],923,36,"เลขใต้รูป");
+  field(fullName(data,"th"),[455,211,1055,77],274,54,"ชื่อภาษาไทย");
+  field(englishName,[625,301,450,60],348,41,"ชื่อภาษาอังกฤษ",blue);
+  field(data.lastEn,[658,365,418,57],409,39,"นามสกุลภาษาอังกฤษ",blue);
+  field(formatDate(data.birth,"th"),[638,434,436,58],479,41,"วันเกิดภาษาไทย");
+  field(formatDate(data.birth,"en"),[708,495,367,56],539,38,"วันเกิดภาษาอังกฤษ",blue);
+  {
     if(data.address.length>4096) warnings.push("ที่อยู่ยาวมาก แสดงเฉพาะส่วนที่อยู่ในพื้นที่บัตร");
     const lines: string[] = []; let available = 790;
     ctx.font = "600 38px Sarabun, sans-serif";
@@ -75,11 +74,11 @@ export function drawCard(canvas: HTMLCanvasElement, data: CardData, photo: HTMLI
     ctx.restore();
   }
   for (const [key,x,w] of [["issue",175,270],["expiry",805,270]] as const) {
-    field(formatDate(data[key],"th"),formatDate(initialData[key],"th"),[x,764,w,49],806,36,`${key} ไทย`);
-    field(formatDate(data[key],"en"),formatDate(initialData[key],"en"),[x,870,w,44],906,33,`${key} อังกฤษ`,blue);
+    field(key === "expiry" ? formatExpiry(data,"th") : formatDate(data.issue,"th"),[x,764,w,49],806,36,`${key} ไทย`);
+    field(key === "expiry" ? formatExpiry(data,"en") : formatDate(data.issue,"en"),[x,870,w,44],906,33,`${key} อังกฤษ`,blue);
   }
-  field(data.issuer ? `(${data.issuer})` : "",`(${initialData.issuer})`,[450,862,350,54],904,29,"หน่วยงานออกบัตร");
-  if (data.issuerCode) field(data.issuerCode,"",[450,963,350,38],992,25,"รหัสหน่วยงาน",blue);
+  field(data.issuer ? `(${data.issuer})` : "",[450,862,350,54],904,29,"หน่วยงานออกบัตร");
+  if (data.issuerCode) field(data.issuerCode,[450,963,350,38],992,25,"รหัสหน่วยงาน",blue);
   if (photo) {
     const px=1092,py=433,pw=359,ph=433;
     const ratio=Math.max(pw/photo.naturalWidth,ph/photo.naturalHeight)*crop.zoom;

@@ -43,6 +43,7 @@ test("emits editor styling and the reference card aspect ratio", async () => {
   assert.match(css, /aspect-ratio:1\.5/);
   assert.match(css, /\.download-button/);
   assert.match(css, /Sarabun-Regular\.ttf/);
+  assert.match(css, /CardThai-Looped-Bold\.ttf/);
 });
 
 test("forwards progress semantics to the primitive", async () => {
@@ -52,6 +53,17 @@ test("forwards progress semantics to the primitive", async () => {
   assert.match(html, /aria-valuenow="37"/);
   assert.match(html, /aria-valuetext="37%"/);
   assert.match(html, /data-state="loading"/);
+});
+
+test("renders a single nullable title picker with no title text input", async () => {
+  const { TitleField } = await vite.ssrLoadModule("/app/card-inputs.tsx");
+  const empty = renderToStaticMarkup(React.createElement(TitleField, { value: null, onChange(){} }));
+  const selected = renderToStaticMarkup(React.createElement(TitleField, { value: 'mr', onChange(){} }));
+  assert.equal((empty.match(/aria-label="คำนำหน้า"/g) ?? []).length, 1);
+  assert.doesNotMatch(empty, /<input\b/);
+  assert.match(empty, /ยังไม่แสดงคำนำหน้าทั้งสองภาษา/);
+  assert.match(selected, /ไทย: นาย · อังกฤษ: Mr\./);
+  assert.doesNotMatch(selected, /กำหนดเอง|คำนำหน้า \(อังกฤษ\)/);
 });
 
 test("emits chart themes for the starter's media dark mode", async () => {
