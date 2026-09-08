@@ -13,18 +13,32 @@ export function drawCard(canvas: HTMLCanvasElement, data: CardData, photo: HTMLI
   canvas.width = WIDTH * scale; canvas.height = HEIGHT * scale;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas unavailable");
+  ctx.globalCompositeOperation = "source-over";
   ctx.scale(scale, scale); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";
-  ctx.drawImage(assets.reference, 0, 0, WIDTH, HEIGHT);
+  const textChanged = JSON.stringify(data) !== JSON.stringify(initialData);
+  // Once any text changes, render every editable value over one full clean plate.
+  // This avoids both old-glyph shadows and visible rectangular repair seams.
+  ctx.drawImage(textChanged ? assets.clean : assets.reference, 0, 0, WIDTH, HEIGHT);
+  if (textChanged) {
+    // The supplied clean plate intentionally retains the original issuer line.
+    // Replace it with a feathered nearby texture patch, then restore the fixed stamp.
+    const issuerPatch=document.createElement("canvas"), issuerMask=document.createElement("canvas");
+    issuerPatch.width=issuerMask.width=390; issuerPatch.height=issuerMask.height=54;
+    const patchContext=issuerPatch.getContext("2d"), maskContext=issuerMask.getContext("2d");
+    if (!patchContext || !maskContext) throw new Error("Canvas unavailable");
+    patchContext.drawImage(assets.clean, 430, 963, 390, 54, 0, 0, 390, 54);
+    maskContext.fillStyle="#fff"; maskContext.filter="blur(6px)"; maskContext.fillRect(8,6,374,42);
+    maskContext.filter="none"; maskContext.fillRect(14,8,362,38);
+    patchContext.globalCompositeOperation="destination-in"; patchContext.drawImage(issuerMask,0,0);
+    ctx.drawImage(issuerPatch,430,862);
+    ctx.drawImage(assets.clean, 525, 747, 138, 124, 525, 747, 138, 124);
+  }
   const warnings: string[] = [];
   const black = "#080d0d", blue = "#080d80";
   type Rect = [number, number, number, number];
-  const clear = ([x,y,w,h]: Rect) => {
-    const sourceY = x === 450 && y === 862 ? 963 : y;
-    ctx.drawImage(assets.clean, x * assets.clean.naturalWidth / WIDTH, sourceY * assets.clean.naturalHeight / HEIGHT, w * assets.clean.naturalWidth / WIDTH, h * assets.clean.naturalHeight / HEIGHT, x,y,w,h);
-  };
-  const field = (value: string, original: string, rect: Rect, baseline: number, size: number, label: string, color = black) => {
-    if (value === original) return;
-    clear(rect);
+  const field = (value: string, _original: string, rect: Rect, baseline: number, size: number, label: string, color = black) => {
+    if (!textChanged) return;
+    if (value.length > 4096) { warnings.push(`${label}ยาวมาก แสดงเฉพาะส่วนที่อยู่ในพื้นที่บัตร`); value = value.slice(0,4096); }
     const [x,y,w,h] = rect;
     let fitted = size;
     ctx.font = `600 ${fitted}px Sarabun, sans-serif`;
@@ -41,28 +55,30 @@ export function drawCard(canvas: HTMLCanvasElement, data: CardData, photo: HTMLI
   field(data.lastEn,initialData.lastEn,[658,365,418,57],409,39,"นามสกุลภาษาอังกฤษ",blue);
   field(formatDate(data.birth,"th"),formatDate(initialData.birth,"th"),[638,434,436,58],479,41,"วันเกิดภาษาไทย");
   field(formatDate(data.birth,"en"),formatDate(initialData.birth,"en"),[708,495,367,56],539,38,"วันเกิดภาษาอังกฤษ",blue);
-  if (data.address !== initialData.address) {
-    clear([270,610,795,68]); clear([175,676,890,68]);
+  if (textChanged) {
+    if(data.address.length>4096) warnings.push("ที่อยู่ยาวมาก แสดงเฉพาะส่วนที่อยู่ในพื้นที่บัตร");
     const lines: string[] = []; let available = 790;
     ctx.font = "600 38px Sarabun, sans-serif";
-    for (const paragraph of data.address.split("\n")) {
+    addressLines: for (const paragraph of data.address.slice(0,4096).split("\n")) {
       let line = "";
       for (const {segment} of new Intl.Segmenter("th", {granularity:"grapheme"}).segment(paragraph)) {
-        if (line && ctx.measureText(line+segment).width > available) { lines.push(line); line = ""; available = 880; }
+        if (line && ctx.measureText(line+segment).width > available) { lines.push(line); line = ""; available = 880; if(lines.length>2) break addressLines; }
         line += segment;
       }
       lines.push(line); available = 880;
+      if (lines.length > 2) break;
     }
     if (lines.length > 2) warnings.push("ที่อยู่เกิน 2 บรรทัดในต้นแบบ จะแสดงเฉพาะ 2 บรรทัดแรก");
     ctx.fillStyle = black;
+    ctx.save();ctx.beginPath();ctx.rect(175,610,890,134);ctx.clip();
     lines.slice(0,2).forEach((line,i) => ctx.fillText(line,i ? 178 : 276,i ? 727 : 662));
+    ctx.restore();
   }
   for (const [key,x,w] of [["issue",175,270],["expiry",805,270]] as const) {
     field(formatDate(data[key],"th"),formatDate(initialData[key],"th"),[x,764,w,49],806,36,`${key} ไทย`);
     field(formatDate(data[key],"en"),formatDate(initialData[key],"en"),[x,870,w,44],906,33,`${key} อังกฤษ`,blue);
   }
   field(data.issuer ? `(${data.issuer})` : "",`(${initialData.issuer})`,[450,862,350,54],904,29,"หน่วยงานออกบัตร");
-  if (data.issuer !== initialData.issuer) ctx.drawImage(assets.reference,525,747,138,124,525,747,138,124);
   if (data.issuerCode) field(data.issuerCode,"",[450,963,350,38],992,25,"รหัสหน่วยงาน",blue);
   if (photo) {
     const px=1092,py=433,pw=359,ph=433;

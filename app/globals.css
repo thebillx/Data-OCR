@@ -86,6 +86,12 @@ canvas { width: 100%; height: auto; display: block; }
 .has-warnings .validation-title { color: #885d14; }
 .validation-panel ul { padding-left: 25px; margin: 10px 0 0; font-size: 13px; line-height: 1.8; color: #855e28; list-style: disc; }
 .session-note { font-size: 12px; line-height: 1.7; color: #7c889b; text-align: center; margin: 17px 0; }
+.export-result { margin-top: 16px; border: 1px solid #c5d6f3; background: #f1f6ff; border-radius: 10px; padding: 16px; }
+.export-result p { margin: 0 0 12px; font-size: 14px; }
+.export-result > div { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; }
+.export-result a, .png-dialog a { color: #2258d7; text-decoration: underline; text-underline-offset: 3px; font-size: 16px; }
+.png-dialog { width: min(96vw,1000px); max-width: 1000px !important; max-height: 94dvh; overflow-y: auto; }
+.png-dialog img { width: 100%; height: auto; }
 .upload-area { text-align: center; padding: 28px 14px; border: 1px dashed #bfcee5; border-radius: 10px; background: #f8faff; }
 .upload-icon { display: grid; place-items: center; width: 54px; height: 54px; border-radius: 13px; background: #eaf0ff; color: #456bcc; margin: 0 auto 16px; }
 .upload-area h3 { margin: 0 0 6px; font-size: 17px; font-weight: 600; }

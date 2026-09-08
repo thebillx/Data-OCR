@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Toaster, toast } from "sonner";
 import { initialData, dataWarnings, formatDate, type CardData, type TestDate } from "@/lib/card-data";
@@ -24,6 +25,9 @@ export default function Studio() {
   const [assets, setAssets] = useState<CardAssets | null>(null);
   const [assetError, setAssetError] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [exported, setExported] = useState<{url:string; name:string; width:number; height:number} | null>(null);
+  const exportUrl = useRef<string | null>(null);
+  const exportBusy = useRef(false);
   const [photoLoading, setPhotoLoading] = useState(false);
   const [layoutWarnings, setLayoutWarnings] = useState<string[]>([]);
   const [tab, setTab] = useState("identity");
@@ -33,6 +37,15 @@ export default function Studio() {
   const photoSequence = useRef(0);
   const dataRef = useRef(data);
   dataRef.current = data;
+  const latestExportInput = useRef({data,portrait,crop,scale});
+  latestExportInput.current = {data,portrait,crop,scale};
+
+  useEffect(() => {
+    setExported(null);
+    if (exportUrl.current) URL.revokeObjectURL(exportUrl.current);
+    exportUrl.current = null;
+  }, [data, portrait, crop, scale]);
+  useEffect(() => () => { if(exportUrl.current) URL.revokeObjectURL(exportUrl.current); }, []);
 
   useEffect(() => {
     let active = true;
@@ -86,19 +99,27 @@ export default function Studio() {
     photoUrl.current = null; setPortrait(null); setPhotoName(""); setPhotoLoading(false); setCrop({ zoom: 1, x: 50, y: 50 });
   }
   async function exportPng() {
-    if (!fontReady || !assets || exporting || photoLoading) return;
+    if (!fontReady || !assets || exportBusy.current || photoLoading) return;
+    exportBusy.current = true;
+    const snapshot = latestExportInput.current;
     setExporting(true);
     try {
       const canvas = document.createElement("canvas");
       drawCard(canvas, dataRef.current, portrait, crop, Number(scale), assets);
       const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob((result) => result ? resolve(result) : reject(new Error("PNG encoding failed")), "image/png"));
+      const current = latestExportInput.current;
+      if(current.data!==snapshot.data || current.portrait!==snapshot.portrait || current.crop!==snapshot.crop || current.scale!==snapshot.scale) {
+        toast.info("ข้อมูลเปลี่ยนระหว่างสร้างภาพ กรุณากดดาวน์โหลดอีกครั้ง"); return;
+      }
       const url = URL.createObjectURL(blob), link = document.createElement("a");
       link.href = url; link.download = `mock-card-${new Date().toISOString().replace(/[:.]/g, "-")}.png`;
+      if(exportUrl.current) URL.revokeObjectURL(exportUrl.current);
+      exportUrl.current = url;
+      setExported({url,name:link.download,width:canvas.width,height:canvas.height});
       document.body.appendChild(link); link.click(); link.remove();
-      window.setTimeout(() => URL.revokeObjectURL(url), 60000);
-      toast.success("ส่งไฟล์ PNG ให้เบราว์เซอร์แล้ว", { description: "บนมือถือ หากภาพเปิดในแท็บใหม่ ให้ใช้เมนูบันทึกภาพ" });
+      toast.success("สร้าง PNG แล้ว", { description: "ถ้ายังไม่มีไฟล์ ให้กดบันทึก PNG อีกครั้ง หรือเปิดภาพเพื่อบันทึก" });
     } catch { toast.error("ส่งออกไม่สำเร็จ ลองขนาด 1× หรือเลือกรูปที่เล็กลง"); }
-    finally { setExporting(false); }
+    finally { exportBusy.current = false; setExporting(false); }
   }
 
   return <div className="app-shell">
@@ -127,6 +148,7 @@ export default function Studio() {
           </Tabs><div className="form-foot"><TriangleAlert size={15} /><p>รองรับ negative test: ค่าผิดรูปแบบเตือนให้ทราบ แต่ไม่บล็อกการส่งออก</p></div>
         </section>
         <section className="preview-column" aria-label="ตัวอย่างและดาวน์โหลด"><div className="preview-panel"><div className="preview-heading"><h2>ตัวอย่างบัตร</h2><span><ScanLine size={14} /> LIVE PREVIEW</span></div><div className="canvas-stage"><div className="canvas-wrap"><canvas ref={canvasRef} width={WIDTH} height={HEIGHT} aria-label="ภาพตัวอย่างบัตรข้อมูลจำลอง เปลี่ยนตามข้อมูลที่กรอก" role="img" />{(!fontReady || !assets) && <div className="canvas-loading" role="status">{(fontError || assetError) ? "โหลดฟอนต์หรือภาพต้นแบบไม่สำเร็จ กรุณารีเฟรช" : "กำลังเตรียมฟอนต์และภาพต้นแบบ…"}</div>}</div><div className="canvas-caption"><span>เทมเพลตบัตรจำลอง / ด้านหน้า</span><span>{WIDTH} × {HEIGHT} px</span></div></div><div className="export-bar"><div className="export-option"><label htmlFor="export-scale">ขนาดไฟล์ PNG</label><Select value={scale} onValueChange={setScale}><SelectTrigger id="export-scale"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="1">1× · 1536 × 1024 px</SelectItem><SelectItem value="2">2× · 3072 × 2048 px</SelectItem></SelectContent></Select></div><Button className="download-button" onClick={() => void exportPng()} disabled={!fontReady || !assets || photoLoading || exporting}><Download size={18} />{exporting ? "กำลังสร้าง PNG…" : "ดาวน์โหลด PNG"}</Button></div></div>
+          {exported && <div className="export-result" aria-label="ไฟล์ PNG ที่สร้างแล้ว"><p role="status">PNG พร้อมบันทึก · {exported.width} × {exported.height} px</p><div><a href={exported.url} download={exported.name}>บันทึก PNG อีกครั้ง</a><Dialog><DialogTrigger asChild><Button variant="outline">เปิดภาพเพื่อบันทึก</Button></DialogTrigger><DialogContent className="png-dialog"><DialogHeader><DialogTitle>ภาพ PNG ที่สร้างแล้ว</DialogTitle><DialogDescription>บนมือถือ แตะภาพค้างแล้วเลือกบันทึกภาพ หรือใช้ลิงก์ดาวน์โหลดด้านล่าง</DialogDescription></DialogHeader>{/* Canvas-derived blob only; no remote URL is accepted. */}<img src={exported.url} alt="ไฟล์ PNG บัตรจำลองพร้อมบันทึก" width={exported.width} height={exported.height} /><a href={exported.url} download={exported.name}>ดาวน์โหลดไฟล์ PNG นี้</a></DialogContent></Dialog></div></div>}
           <div className="specimen-note"><ShieldCheck size={21} /><div><h3>สำหรับทดสอบเท่านั้น</h3><p>ทุกภาพมีข้อความ MOCK DATA · DEV TEST · NOT VALID ใช้ข้อมูลสมมติเท่านั้น บาร์โค้ดและตราเป็นภาพคงที่ ไม่เปลี่ยนตามข้อมูล</p></div></div>
           <div className={`validation-panel ${warnings.length ? "has-warnings" : ""}`} aria-live="polite"><div className="validation-title">{warnings.length ? <TriangleAlert size={17} /> : <Check size={17} />}<h3>{warnings.length ? `ข้อสังเกต ${warnings.length} รายการ · ยังดาวน์โหลดได้` : "ข้อมูลอยู่ในพื้นที่แสดงผล"}</h3></div>{warnings.length > 0 ? <ul>{warnings.map((warning, index) => <li key={`${index}-${warning}`}>{warning}</li>)}</ul> : <p>รูปแบบและความยาวเบื้องต้นเท่านั้น ไม่ใช่การตรวจสอบตัวตนหรือรับรองผล OCR</p>}</div>
           <p className="session-note">ไม่มีการบันทึกข้อมูลอัตโนมัติ รีเฟรชหรือปิดหน้าแล้วข้อมูลที่กรอกจะหาย</p>
