@@ -30,7 +30,7 @@ Mock Card Studio — เว็บแก้ข้อมูลบัตรจำ�
 ## ขอบเขตความเหมือนต้นแบบ
 
 ใช้ภาพ mock ที่เจ้าของให้เป็นฐาน ระบบใช้ clean plate แบบเต็มใบและวาดทุกช่องใหม่ตั้งแต่เปิดหน้า
-ข้อความที่แก้ได้ทั้งไทยและอังกฤษใช้ Noto Sans Thai แบบ loopless ภายใต้ชื่อ StudioSans family เดียวกัน
+ข้อความที่แก้ได้ทั้งไทยและอังกฤษใช้ Noto Sans Thai UI แบบ loopless ภายใต้ชื่อ StudioSansUI family เดียวกัน
 เพื่อให้ UI/Canvas อ่านชัด สม่ำเสมอ และไม่เกิดการเปลี่ยน typeface ระหว่างภาษา โดยใช้ weight ต่างกันตามหน้าที่ของข้อความ
 ระบบวาดข้อความใหม่บน clean plate เพื่อไม่ให้เหลือเงาตัวอักษรเดิมหรือรอยต่อสี่เหลี่ยมระหว่างช่อง
 จึงไม่รับประกันฟอนต์/พื้นหลังบริเวณแก้ไขเหมือนต้นฉบับ 100%
@@ -67,15 +67,15 @@ macOS สามารถพัฒนาผ่าน Vite ได้ แต่ bui
 - `lib/draw-card.ts`: วาดภาพและกำหนดบริเวณแก้ไข
 - `public/card-reference.jpeg`: ภาพ mock ต้นฉบับที่เจ้าของให้
 - `public/card-clean.png`: พื้นหลังสำหรับแทนข้อความที่แก้ไข (สร้างด้วย built-in imagegen)
-- `public/fonts/NotoSansThai-Variable.ttf`: ฟอนต์ self-hosted สำหรับ UI และ Canvas ทั้งไทย/อังกฤษ
-- `public/fonts/NotoSansThai-OFL.txt`: ใบอนุญาต SIL Open Font License ของ Noto Sans Thai
+- `public/fonts/NotoSansThaiUI-Variable.ttf`: ฟอนต์ self-hosted แบบ loopless UI สำหรับ UI และ Canvas ทั้งไทย/อังกฤษ
+- `public/fonts/NotoSansThaiUI-OFL.txt`: ใบอนุญาต SIL Open Font License ของ Noto Sans Thai UI
 - `REVIEW.md`: ผลตรวจและข้อจำกัด
 
 ไม่มีการเปลี่ยนข้อมูลในระบบธนาคาร ไม่มี OCR API และไม่มีการเชื่อมต่อ NTB จากเว็บนี้
 
 ## ฟอนต์บนบัตร
 
-UI และข้อความ Canvas ใช้ [Noto Sans Thai ใน Google Fonts](https://github.com/google/fonts/tree/main/ofl/notosansthai) แบบ loopless เป็น `StudioSans` family เดียวสำหรับอักษรไทยและ Latin
-ไฟล์ variable font ถูก self-host ใน `public/fonts/NotoSansThai-Variable.ttf` จึงไม่มีการเรียก Google Fonts ตอนใช้งาน และแนบใบอนุญาต SIL Open Font License ไว้ที่ `public/fonts/NotoSansThai-OFL.txt`
+UI และข้อความ Canvas ใช้ [Noto Sans Thai UI ใน Google Fonts](https://github.com/google/fonts/tree/main/ofl/notosansthaiui) แบบ loopless UI cut เป็น `StudioSansUI` family เดียวสำหรับอักษรไทยและ Latin
+ไฟล์ variable font ถูก self-host ใน `public/fonts/NotoSansThaiUI-Variable.ttf` จึงไม่มีการเรียก Google Fonts ตอนใช้งาน และใช้ filename ใหม่เพื่อ cache-bust จากฟอนต์รอบก่อน พร้อมแนบใบอนุญาต SIL Open Font License ไว้ที่ `public/fonts/NotoSansThaiUI-OFL.txt`
 
 ต้นแบบเป็นภาพ raster ไม่มีไฟล์ฟอนต์ต้นฉบับ จึงปรับให้อ่านชัดและสม่ำเสมอเป็นหลัก ไม่รับประกันว่ารูปทรงตัวอักษรตรงกับภาพต้นฉบับ 100%

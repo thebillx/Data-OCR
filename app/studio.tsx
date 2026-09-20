@@ -198,7 +198,7 @@ export default function Studio() {
   }, []);
   useEffect(() => {
     let active = true;
-    Promise.all([document.fonts.load('400 32px "StudioSans"', 'ทดสอบ Test'), document.fonts.load('600 32px "StudioSans"', 'ทดสอบ Test'), document.fonts.load('700 54px "StudioSans"', 'นาย กิตติพงศ์ Test')])
+    Promise.all([document.fonts.load('400 32px "StudioSansUI"', 'ทดสอบ Test'), document.fonts.load('500 54px "StudioSansUI"', 'ซ ซี ศรีสมบัติ'), document.fonts.load('600 32px "StudioSansUI"', 'ทดสอบ Test')])
       .then((fonts) => { if (active) { if (fonts.some((f) => f.length === 0)) throw new Error("font missing"); setFontReady(true); } })
       .catch(() => { if (active) setFontError(true); });
     return () => { active = false; photoSequence.current++; if (photoUrl.current) URL.revokeObjectURL(photoUrl.current); };

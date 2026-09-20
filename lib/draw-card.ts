@@ -39,7 +39,7 @@ export function drawCard(canvas: HTMLCanvasElement, data: CardData, photo: HTMLI
     if (value.length > 4096) { warnings.push(`${label}ยาวมาก แสดงเฉพาะส่วนที่อยู่ในพื้นที่บัตร`); value = value.slice(0,4096); }
     const [x,y,w,h] = rect;
     let fitted = size;
-    const font = (px: number) => label === "ชื่อภาษาไทย" ? `650 ${px}px StudioSans, sans-serif` : `600 ${px}px StudioSans, sans-serif`;
+    const font = (px: number) => label === "ชื่อภาษาไทย" ? `500 ${px}px StudioSansUI, sans-serif` : `600 ${px}px StudioSansUI, sans-serif`;
     ctx.font = font(fitted);
     while (ctx.measureText(value).width > w - 8 && fitted > 24) { fitted--; ctx.font = font(fitted); }
     if (ctx.measureText(value).width > w - 8) warnings.push(`${label}ยาวเกินพื้นที่ ภาพจะแสดงไม่ครบ`);
@@ -57,7 +57,7 @@ export function drawCard(canvas: HTMLCanvasElement, data: CardData, photo: HTMLI
   {
     if(data.address.length>4096) warnings.push("ที่อยู่ยาวมาก แสดงเฉพาะส่วนที่อยู่ในพื้นที่บัตร");
     const lines: string[] = []; let available = 790;
-    ctx.font = "600 38px StudioSans, sans-serif";
+    ctx.font = "500 38px StudioSansUI, sans-serif";
     addressLines: for (const paragraph of data.address.slice(0,4096).split("\n")) {
       let line = "";
       for (const {segment} of new Intl.Segmenter("th", {granularity:"grapheme"}).segment(paragraph)) {
