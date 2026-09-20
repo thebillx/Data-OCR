@@ -46,7 +46,7 @@ test('baseline and edited names use one clean plate and Thai font at both scales
     assert.equal(warnings.length,0);
     assert.equal(calls[0][0],assets.clean); assert.equal(calls.at(-1)[0],assets.reference);
     assert.deepEqual(calls.at(-1).slice(1),[1098,0,438,38,1098,0,438,38]);
-    assert.equal(texts.find(t=>t.value===data.fullName(fixture,'th')).font,'650 54px StudioSans, sans-serif');
+    assert.equal(texts.find(t=>t.value===data.fullName(fixture,'th')).font,'500 54px StudioSansUI, sans-serif');
     }
   }
 });
