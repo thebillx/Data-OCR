@@ -42,8 +42,8 @@ test("emits editor styling and the reference card aspect ratio", async () => {
   assert.match(css, /\.canvas-wrap/);
   assert.match(css, /aspect-ratio:1\.5/);
   assert.match(css, /\.download-button/);
-  assert.match(css, /Sarabun-Regular\.ttf/);
-  assert.match(css, /CardThai-Looped-Bold\.ttf/);
+  assert.match(css, /NotoSansThai-Variable\.ttf/);
+  assert.match(css, /font-family:StudioSans/);
 });
 
 test("forwards progress semantics to the primitive", async () => {
