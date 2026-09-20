@@ -4,13 +4,17 @@ Mock Card Studio — เว็บแก้ข้อมูลบัตรจำ�
 
 ## ใช้งาน
 
+- เปิดหน้าเว็บและกด “เริ่มใหม่” จะได้ฟอร์มว่างเสมอ ไม่มีข้อมูล mock ถูกเติมอัตโนมัติ
 - แก้ข้อความในแท็บบุคคล / วันและที่อยู่
+- Local Profile บันทึกข้อมูลบัตร รูป และตำแหน่ง crop ลง IndexedDB ของ Browser เครื่องนี้เท่านั้น ไม่มี backend และไม่ auto-load Profile ตอนเปิดเว็บ
+- เลือก Profile เพื่อโหลดกลับ, กด Save เพื่ออัปเดต, Save as new เพื่อสร้างชุดใหม่ และ Delete เพื่อลบชุดที่บันทึกไว้
+- ถ้ามีการแก้ไขที่ยังไม่ได้ Save ระบบจะเตือนก่อนสลับ Profile เพื่อป้องกันข้อมูลหาย
 - คำนำหน้าเลือกจาก dropdown จุดเดียว ค่าเริ่มต้น/เริ่มใหม่เป็น `null` (ไม่ระบุคำนำหน้า)
 - เลือก นาย → นาย / Mr., นาง → นาง / Mrs., นางสาว → นางสาว / Miss, เด็กชาย → เด็กชาย / Master, เด็กหญิง → เด็กหญิง / Miss
 - ไทยและอังกฤษจับคู่อัตโนมัติ ไม่ต้องพิมพ์คำนำหน้าในช่องชื่อ และไม่มีช่องคำนำหน้าแยกสองภาษา
 - เลือกไม่ระบุเพื่อล้างคำนำหน้าทั้งสองภาษา โดยคงชื่อ/ชื่อกลาง/นามสกุลไว้
 - วัน เดือน ปีเลือกจาก dropdown (ปี ค.ศ.) และแสดง พ.ศ. บนบัตรโดยอัตโนมัติ
-- วันที่เริ่มต้น: วันเกิด mock เดิม, วันออกบัตรวันนี้ตามอุปกรณ์, วันหมดอายุ +8 ปีสำหรับชุดทดสอบ ไม่ใช่กฎออกบัตรจริง
+- วันที่เริ่มต้นเป็นค่าว่างทั้งหมด; ปุ่ม “ใช้วันนี้” และ “วันออกบัตร + 8 ปี” ยังมีไว้ให้เลือกใช้เมื่อต้องการ
 - dropdown ปรับวันท้ายเดือนให้ถูกต้องพร้อมแจ้งเตือน เช่น 29 ก.พ. → 28 ก.พ. เมื่อเปลี่ยนเป็นปีปกติ
 - ใช้ “กรอกเอง (negative test)” สำหรับวันที่ผิดรูปแบบ หรือปุ่มล้างวันที่เพื่อทดสอบค่าว่าง
 - วันหมดอายุไม่เปลี่ยนตามวันออกบัตรเอง กดปุ่ม “วันออกบัตร + 8 ปี” เมื่อต้องการคำนวณใหม่
@@ -20,14 +24,15 @@ Mock Card Studio — เว็บแก้ข้อมูลบัตรจำ�
 - ดาวน์โหลด PNG ขนาด 1536×1024 หรือ 3072×2048
 - ตัวอย่างบัตรแสดงเล็กลง 40% (กว้าง/สูงเหลือ 60% ของเดิม) โดยขนาดไฟล์ PNG ไม่เปลี่ยน
 - ข้อมูลผิดรูปแบบเตือน แต่ไม่บล็อก negative test
-- ข้อมูลและรูปที่กรอกประมวลผลในเบราว์เซอร์ ไม่มี API บันทึกข้อมูล ไม่มี autosave
+- ข้อมูลและรูปประมวลผลในเบราว์เซอร์ ไม่มี API บันทึกข้อมูล; เฉพาะ Profile ที่ผู้ใช้กด Save เท่านั้นที่เก็บใน IndexedDB
+- Profile ผูกกับ Browser/origin ปัจจุบัน การล้าง site data, เปลี่ยน Browser หรือเปลี่ยน origin อาจทำให้ Profile ที่บันทึกไว้หาย
 
 ## ขอบเขตความเหมือนต้นแบบ
 
 ใช้ภาพ mock ที่เจ้าของให้เป็นฐาน ระบบใช้ clean plate แบบเต็มใบและวาดทุกช่องใหม่ตั้งแต่เปิดหน้า
-คำนำหน้า ชื่อ และนามสกุลไทยใช้ CardThai (Noto Sans Thai Looped Bold ปรับความกว้าง 90%) แบบเดียวกัน
-ทั้งก่อนและหลังแก้ไข ส่วนช่องอื่นใช้ Sarabun
-เพื่อไม่ให้เหลือเงาตัวอักษรเดิมหรือรอยต่อสี่เหลี่ยมระหว่างช่อง
+ข้อความที่แก้ได้ทั้งไทยและอังกฤษใช้ Noto Sans Thai แบบ loopless ภายใต้ชื่อ StudioSans family เดียวกัน
+เพื่อให้ UI/Canvas อ่านชัด สม่ำเสมอ และไม่เกิดการเปลี่ยน typeface ระหว่างภาษา โดยใช้ weight ต่างกันตามหน้าที่ของข้อความ
+ระบบวาดข้อความใหม่บน clean plate เพื่อไม่ให้เหลือเงาตัวอักษรเดิมหรือรอยต่อสี่เหลี่ยมระหว่างช่อง
 จึงไม่รับประกันฟอนต์/พื้นหลังบริเวณแก้ไขเหมือนต้นฉบับ 100%
 ทุกภาพคงข้อความ MOCK DATA • DEV TEST • NOT VALID ไว้
 บาร์โค้ด ชิป ตรา และลายเซ็นเป็นภาพคงที่ ไม่ได้เข้ารหัสข้อมูลใหม่
@@ -54,25 +59,23 @@ macOS สามารถพัฒนาผ่าน Vite ได้ แต่ bui
 
 ## ส่วนสำคัญ
 
-- `app/studio.tsx`: ฟอร์มและการส่งออก
+- `app/studio.tsx`: ฟอร์ม การเชื่อม Local Profile และการส่งออก
+- `app/profile-manager.tsx`: UI เลือก / Save / Save as new / Delete Profile
 - `app/card-inputs.tsx`: dropdown คำนำหน้า/วันที่ และโหมด negative test
-- `lib/card-data.ts`: ข้อมูลเริ่มต้นและตรวจรูปแบบ
+- `lib/card-data.ts`: blank defaults, sample fixture และตรวจรูปแบบ
+- `lib/profile-store.ts`: IndexedDB schema/validation และ local profile persistence
 - `lib/draw-card.ts`: วาดภาพและกำหนดบริเวณแก้ไข
 - `public/card-reference.jpeg`: ภาพ mock ต้นฉบับที่เจ้าของให้
 - `public/card-clean.png`: พื้นหลังสำหรับแทนข้อความที่แก้ไข (สร้างด้วย built-in imagegen)
-- `public/fonts/OFL.txt`: ใบอนุญาต Sarabun
-- `public/fonts/NotoSansThaiLooped-OFL.txt`: ใบอนุญาต Noto Sans Thai Looped
+- `public/fonts/NotoSansThai-Variable.ttf`: ฟอนต์ self-hosted สำหรับ UI และ Canvas ทั้งไทย/อังกฤษ
+- `public/fonts/NotoSansThai-OFL.txt`: ใบอนุญาต SIL Open Font License ของ Noto Sans Thai
 - `REVIEW.md`: ผลตรวจและข้อจำกัด
 
 ไม่มีการเปลี่ยนข้อมูลในระบบธนาคาร ไม่มี OCR API และไม่มีการเชื่อมต่อ NTB จากเว็บนี้
 
 ## ฟอนต์บนบัตร
 
-CardThai สร้างจาก [Noto Sans Thai Looped ใน Google Fonts](https://github.com/google/fonts/tree/main/ofl/notosansthailooped)
-ซึ่งแนบต้นฉบับและใบอนุญาต OFL ไว้ใน `public/fonts/` สามารถสร้างซ้ำด้วย fontTools:
+UI และข้อความ Canvas ใช้ [Noto Sans Thai ใน Google Fonts](https://github.com/google/fonts/tree/main/ofl/notosansthai) แบบ loopless เป็น `StudioSans` family เดียวสำหรับอักษรไทยและ Latin
+ไฟล์ variable font ถูก self-host ใน `public/fonts/NotoSansThai-Variable.ttf` จึงไม่มีการเรียก Google Fonts ตอนใช้งาน และแนบใบอนุญาต SIL Open Font License ไว้ที่ `public/fonts/NotoSansThai-OFL.txt`
 
-```sh
-python -m fontTools.varLib.instancer public/fonts/NotoSansThaiLooped-Variable.ttf wght=700 wdth=90 --static -o public/fonts/CardThai-Looped-Bold.ttf
-```
-
-ต้นแบบเป็นภาพ raster ไม่มีไฟล์ฟอนต์ต้นฉบับ จึงปรับให้ใกล้เคียงและสม่ำเสมอ แต่ไม่รับประกันตรงกัน 100%
+ต้นแบบเป็นภาพ raster ไม่มีไฟล์ฟอนต์ต้นฉบับ จึงปรับให้อ่านชัดและสม่ำเสมอเป็นหลัก ไม่รับประกันว่ารูปทรงตัวอักษรตรงกับภาพต้นฉบับ 100%

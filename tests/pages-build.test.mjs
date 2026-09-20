@@ -38,5 +38,5 @@ test('static CSS loads each self-hosted card font within the deployment path',()
       fonts.add(path.basename(url.pathname));
     }
   }
-  assert.deepEqual([...fonts].sort(),['CardThai-Looped-Bold.ttf','Sarabun-Regular.ttf','Sarabun-SemiBold.ttf']);
+  assert.deepEqual([...fonts].sort(),['NotoSansThai-Variable.ttf']);
 });

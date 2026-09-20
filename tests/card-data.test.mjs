@@ -46,7 +46,7 @@ test('baseline and edited names use one clean plate and Thai font at both scales
     assert.equal(warnings.length,0);
     assert.equal(calls[0][0],assets.clean); assert.equal(calls.at(-1)[0],assets.reference);
     assert.deepEqual(calls.at(-1).slice(1),[1098,0,438,38,1098,0,438,38]);
-    assert.equal(texts.find(t=>t.value===data.fullName(fixture,'th')).font,'700 54px CardThai, sans-serif');
+    assert.equal(texts.find(t=>t.value===data.fullName(fixture,'th')).font,'650 54px StudioSans, sans-serif');
     }
   }
 });
@@ -62,15 +62,18 @@ test('dropdown dates clamp to the selected month and leap year without mutation'
   assert.equal(data.selectableDate({day:'31',month:'2',year:'2024'}),false);
   assert.equal(data.selectableDate({day:'ABC',month:'2',year:'2024'}),false);
 });
-test('defaults use local today, preserve mock birth, and add eight test years', () => {
-  const now=new Date(2026,8,8,1,0);
-  const fixture=data.defaultData(now);
-  assert.equal(JSON.stringify(fixture.issue),JSON.stringify({day:'8',month:'9',year:'2026'}));
-  assert.equal(fixture.expiry.year,'2034');
-  assert.equal(fixture.birth.year,'1996');
+test('defaults are blank while date shortcuts remain available', () => {
+  const fixture=data.defaultData(new Date(2026,8,8,1,0));
+  assert.equal(fixture.idNumber,'');
+  assert.equal(fixture.firstTh,'');
+  assert.equal(fixture.firstEn,'');
+  assert.equal(fixture.address,'');
+  assert.equal(JSON.stringify(fixture.birth),JSON.stringify({day:'',month:'',year:''}));
+  assert.equal(JSON.stringify(fixture.issue),JSON.stringify({day:'',month:'',year:''}));
+  assert.equal(JSON.stringify(fixture.expiry),JSON.stringify({day:'',month:'',year:''}));
   assert.equal(fixture.title,null);
   assert.equal(fixture.expiryMode,'date');
-  assert.notEqual(fixture.birth,data.initialData.birth);
+  assert.equal(data.todayDate(new Date(2026,8,8,1,0)).year,'2026');
   assert.equal(data.addTestYears({day:'29',month:'2',year:'2096'},8).day,'29');
   assert.equal(data.addTestYears({day:'29',month:'2',year:'2096'},4).day,'28');
   assert.equal(data.addTestYears({day:'31',month:'2',year:'2024'},8).year,'2024');
@@ -99,7 +102,8 @@ test('lifetime skips only expiry warnings and preserves the stored date', () => 
     const dated={...data.defaultData(new Date(2026,8,8)),birth:{day:'31',month:'2',year:'1996'},expiry};
     const lifetime={...dated,expiryMode:'lifetime'};
     const before=JSON.stringify(lifetime);
-    assert.ok(data.dataWarnings(dated).some(w=>w.includes('หมดอายุ')));
+    const expiryTouched=Boolean(expiry.day||expiry.month||expiry.year);
+    assert.equal(data.dataWarnings(dated).some(w=>w.includes('หมดอายุ')),expiryTouched);
     assert.ok(data.dataWarnings(lifetime).some(w=>w.includes('วันเกิด')));
     assert.ok(data.dataWarnings(lifetime).every(w=>!w.includes('หมดอายุ')));
     assert.equal(data.formatExpiry(lifetime,'th'),'ตลอดชีพ');

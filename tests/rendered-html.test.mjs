@@ -30,5 +30,7 @@ test("renders the Thai editor and production metadata", async () => {
   assert.match(html, /Mock Card Studio/);
   assert.match(html, /สร้างบัตรข้อมูลทดสอบ/);
   assert.match(html, /ดาวน์โหลด PNG/);
+  assert.match(html, /Local Profile/);
+  assert.doesNotMatch(html, /กิตติพงศ์|Kittipong|3109223254063/);
   assert.doesNotMatch(html, /name="codex-preview"/);
 });
